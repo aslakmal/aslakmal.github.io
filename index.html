@@ -26,7 +26,7 @@
 
     // 1. Generate License
     document.getElementById("genBtn").onclick = async () => {
-      const key = "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+      const key = Math.random().toString(36).substring(2, 10).toUpperCase();
       await set(ref(db, 'licenses/' + key), {
         active: true,
         devices: {} // Empty initially
