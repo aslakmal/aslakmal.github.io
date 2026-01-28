@@ -1,53 +1,49 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>License Generator</title>
-</head>
+<head><title>Admin Dashboard</title></head>
 <body>
+  <h2>License Manager</h2>
+  <button id="genBtn">Generate New License</button>
+  <hr>
+  <div id="list">Loading licenses...</div>
 
-<button id="genBtn">Create License</button>
-<p id="out"></p>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    const firebaseConfig = { /* USE YOUR CONFIG */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAbnUDbULQE5NW5uRiu9VU5QqP3reOOQH0",
-    authDomain: "stable-synapse-241016.firebaseapp.com",
-    projectId: "stable-synapse-241016",
-    appId: "1:311188310788:web:888512a24236ba39c45e51"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // Modern way: Use an event listener instead of 'onclick' in HTML
-  document.getElementById("genBtn").addEventListener("click", async () => {
-    const outDisplay = document.getElementById("out");
-    outDisplay.innerText = "Generating...";
-    
-    // Generate a clean 8-character key or a full UUID
-    const licenseKey = crypto.randomUUID().split('-')[0].toUpperCase(); 
-
-    try {
-      await setDoc(doc(db, "licenses", licenseKey), {
+    // 1. Generate License
+    document.getElementById("genBtn").onclick = async () => {
+      const key = "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+      await set(ref(db, 'licenses/' + key), {
         active: true,
-        maxDevices: 5,
-        devices: {},
-        createdAt: serverTimestamp()
+        devices: {} // Empty initially
       });
-      
-      outDisplay.innerHTML = `<strong>Success!</strong><br>License key: <code>${licenseKey}</code>`;
-      console.log("Saved to Firebase:", licenseKey);
-    } catch(err) {
-      outDisplay.innerText = "Error: " + err.message;
-      console.error("Firestore Error:", err);
-    }
-  });
-</script>
+    };
 
+    // 2. Real-time List of all licenses
+    onValue(ref(db, 'licenses'), (snapshot) => {
+      const data = snapshot.val();
+      const listDiv = document.getElementById("list");
+      listDiv.innerHTML = "";
+      
+      for (let key in data) {
+        const deviceCount = data[key].devices ? Object.keys(data[key].devices).length : 0;
+        listDiv.innerHTML += `
+          <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+            <strong>${key}</strong> | Devices: ${deviceCount}/5 
+            <button onclick="resetDevices('${key}')">Reset Devices</button>
+            <button onclick="deleteKey('${key}')" style="color:red">Delete Key</button>
+          </div>`;
+      }
+    });
+
+    // Attach functions to window so buttons can find them
+    window.resetDevices = (key) => remove(ref(db, `licenses/${key}/devices`));
+    window.deleteKey = (key) => remove(ref(db, `licenses/${key}`));
+  </script>
 </body>
 </html>
